@@ -9,4 +9,8 @@ class EventModeration(BaseModel):
     status: Literal[EventStatus.SUSPENDED, EventStatus.PUBLISHED] = Field()
 
 class PlatformStats(BaseModel):
+    total_events: int = Field()
+    tickets_sold: int = Field()
+    total_revenue_kobo: int = Field()
+
     
