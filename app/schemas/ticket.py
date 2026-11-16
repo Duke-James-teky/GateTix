@@ -16,3 +16,6 @@ class CheckedInRequest(BaseModel):
 
     code: str = Field(min_length=8, max_length=60)
 
+class CheckInResponse(BaseModel):
+    message: str = Field()
+    ticket: TicketRead
