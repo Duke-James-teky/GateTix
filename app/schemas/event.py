@@ -53,3 +53,11 @@ class TierRead(BaseModel):
     @property
     def remaining(self) -> int:
         return self.quantity - self.sold - self.reserved
+    
+class TierReport(BaseModel):
+    tier_id: int = Field()
+    name: str = Field(examples="VIP")
+    sold: int = Field()
+    remaining: int = Field()
+    checked_in: int = Field()
+    revenue_kobo: int = Field()
