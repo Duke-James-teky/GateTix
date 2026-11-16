@@ -16,7 +16,7 @@ class EventStatus(StrEnum):
     CANCELLED = "cancelled"
     SUSPENDED = "suspended"
 
-class OrderStatus(StrEnum)
+class OrderStatus(StrEnum):
     PENDING = "pending"
     PAID = "paid"
     EXPIRED = "expired"
@@ -26,4 +26,3 @@ class TicketStatus(StrEnum):
     VALID = "valid"
     USED = "used"
     REFUNDED = "refunded"
-    
