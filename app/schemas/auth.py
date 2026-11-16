@@ -23,4 +23,14 @@ class LoginRequest(BaseModel):
     model_config = ConfigDict(str_strip_whitespace=True)
 
     email: str = Field()
-    password: str = Field()
+    password: str = Field(min_length=1)
+
+    @field_validator("emai")
+    @classmethod
+    def lowercase_email(cls, value:str) -> str:
+        return value.lower()
+
+class TokenResponse(BaseModel):
+    access_token: str = Field()
+    token_type: str = Field(default="bearer")
+    
