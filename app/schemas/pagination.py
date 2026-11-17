@@ -9,4 +9,9 @@ class Page(BaseModel, Generic[T]):
     total: int = Field(ge=0,description="total results across all pages")
     page: int = Field(ge=1, description="current page number, starting form 1")
     size: int = Field(ge=1, description="maximum results per page")
+
+    @computed_field(description="total number of pages", return_type=int)
+    @property
+    def pages(self) -> int:
+        return math.ceil(self.total / self.size)
     
