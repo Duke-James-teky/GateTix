@@ -1,0 +1,14 @@
+# Secrets
+.env
+
+# Python
+__pycache__/
+*.pyc
+venv/
+.venv/
+
+# Tools
+.pytest_cache/
+.idea/
+.vscode/
+*.egg-info/
