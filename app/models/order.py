@@ -1,9 +1,12 @@
 from datetime import datetime
+from typing import TYPE_CHECKING
 from sqlalchemy import BigInteger, CheckConstraint, DateTime, ForeignKey, Index, func, text
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.database.base import Base
 from app.models.enums import OrderStatus, enum_column_type
 
+if TYPE_CHECKING:
+    from app.models.ticket import Ticket
 class Order(Base):
     __tablename__ = "orders"
     __table_args__ = (
@@ -35,5 +38,7 @@ class Order(Base):
     )
     expires_at: Mapped[datetime | None] = mapped_column( DateTime(timezone=True), default=None)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    tickets: Mapped[list["Ticket"]] = relationship(order_by="Ticket.id")
 
     
