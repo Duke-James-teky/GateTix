@@ -1,9 +1,12 @@
 from datetime import datetime
+from typing import TYPE_CHECKING
 from sqlalchemy import CheckConstraint, DateTime, ForeignKey, String, text
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.database.base import Base
 from app.models.enums import EventStatus, enum_column_type
 
+if TYPE_CHECKING:
+    from app.models.ticket_tier import TicketTier
 class Event(Base):
     __tablename__ = "events"
     __table_args__ = (
@@ -25,3 +28,5 @@ class Event(Base):
         server_default=EventStatus.DRAFT.value,
         index=True,
     )
+
+    tiers: Mapped[list["TicketTier"]] = relationship(order_by="Ticket.id")
