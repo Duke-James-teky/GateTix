@@ -1,0 +1,72 @@
+from sqlalchemy import func, select
+from sqlalchemy.orm import Session, selectinload
+
+from app.core.exceptions import BadRequestError, ConflictError, NotFoundError
+from app.models.enums import EventStatus
+from app.models.event import Event
+from app.models.ticket_tier import TicketTier
+from app.models.user import User
+from app.schemas.event import EventCreate, EventUpdate
+
+EDITABLE_STATUSES = {EventStatus.DRAFT, EventStatus.PUBLISHED}
+
+
+def create_event(db: Session, organiser: User, data: EventCreate) -> Event:
+    """Create a draft event owned by the organiser."""
+    event = Event(organiser_id=organiser.id, **data.model_dump())
+    db.add(event)
+    db.commit()
+    return event
+
+
+def update_event(db: Session, event: Event, data: EventUpdate) -> Event:
+    """Apply the fields the organiser sent. Cancelled and suspended events are locked."""
+    if event.status not in EDITABLE_STATUSES:
+        raise ConflictError(f"A {event.status} event cannot be edited")
+
+    updates = {
+        field: value
+        for field, value in data.model_dump(exclude_unset=True).items()
+        if value is not None
+    }
+    if not updates:
+        raise BadRequestError("No changes provided")
+
+    # The schema can only compare dates sent together, so check against stored values too.
+    starts_at = updates.get("starts_at", event.starts_at)
+    ends_at = updates.get("ends_at", event.ends_at)
+    if ends_at <= starts_at:
+        raise BadRequestError("ends_at must be after starts_at")
+
+    for field, value in updates.items():
+        setattr(event, field, value)
+    db.commit()
+    return event
+
+
+def publish_event(db: Session, event: Event) -> Event:
+    """Make a draft event visible to attendees. It needs at least one ticket tier."""
+    if event.status != EventStatus.DRAFT:
+        raise ConflictError("Only draft events can be published")
+
+    tier_count = db.scalar(
+        select(func.count()).select_from(TicketTier).where(TicketTier.event_id == event.id)
+    )
+    if not tier_count:
+        raise BadRequestError("Add at least one ticket tier before publishing")
+
+    event.status = EventStatus.PUBLISHED
+    db.commit()
+    return event
+
+
+def get_public_event(db: Session, event_id: int) -> Event:
+    """Return a published event with its tiers. Anything else looks like it doesn't exist."""
+    event = db.scalar(
+        select(Event)
+        .where(Event.id == event_id, Event.status == EventStatus.PUBLISHED)
+        .options(selectinload(Event.tiers))
+    )
+    if event is None:
+        raise NotFoundError("Event not found")
+    return event
