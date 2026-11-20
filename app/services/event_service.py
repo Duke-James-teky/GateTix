@@ -1,3 +1,5 @@
+from datetime import datetime, timezone
+
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session, selectinload
 
@@ -7,6 +9,7 @@ from app.models.event import Event
 from app.models.ticket_tier import TicketTier
 from app.models.user import User
 from app.schemas.event import EventCreate, EventUpdate
+from app.utils.pagination import PageParams, paginate
 
 EDITABLE_STATUSES = {EventStatus.DRAFT, EventStatus.PUBLISHED}
 
@@ -70,3 +73,33 @@ def get_public_event(db: Session, event_id: int) -> Event:
     if event is None:
         raise NotFoundError("Event not found")
     return event
+
+
+def list_events(
+    db: Session,
+    params: PageParams,
+    city: str | None = None,
+    category: str | None = None,
+    starts_after: datetime | None = None,
+    starts_before: datetime | None = None,
+) -> dict:
+    """List upcoming published events, soonest first, with optional filters."""
+    if starts_after and starts_before and starts_after > starts_before:
+        raise BadRequestError("starts_after must not be later than starts_before")
+
+    query = select(Event).where(
+        Event.status == EventStatus.PUBLISHED,
+        Event.starts_at >= datetime.now(timezone.utc),
+    )
+    if city and city.strip():
+        query = query.where(func.lower(Event.city) == city.strip().lower())
+    if category and category.strip():
+        query = query.where(func.lower(Event.category) == category.strip().lower())
+    if starts_after:
+        query = query.where(Event.starts_at >= starts_after)
+    if starts_before:
+        query = query.where(Event.starts_at <= starts_before)
+
+    # The id breaks ties, so events with the same start time never swap pages.
+    query = query.order_by(Event.starts_at, Event.id)
+    return paginate(db, query, params)

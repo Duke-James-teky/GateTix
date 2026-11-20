@@ -1,4 +1,7 @@
-from fastapi import APIRouter, status
+from typing import Annotated
+
+from fastapi import APIRouter, Query, status
+from pydantic import AwareDatetime
 
 from app.core.dependencies import DbSession, OrganiserUser, OwnedEvent
 from app.routes.responses import (
@@ -9,10 +12,47 @@ from app.routes.responses import (
     UNAUTHORIZED,
 )
 from app.schemas.event import EventCreate, EventDetail, EventRead, EventUpdate
+from app.schemas.pagination import Page
 from app.schemas.ticket_tier import TierCreate, TierRead
 from app.services import event_service, tier_service
+from app.utils.pagination import PageQuery
 
 router = APIRouter(prefix="/events", tags=["Events"])
+
+
+@router.get(
+    "",
+    response_model=Page[EventRead],
+    summary="Browse upcoming events",
+    description=(
+        "Open to everyone. Lists published events that have not started yet, soonest "
+        "first, one page at a time. Filter by city, category and start-time range. "
+        "City and category match the whole word, ignoring capital letters. "
+        "Write times in UTC with a Z, for example `2027-01-01T00:00:00Z`."
+    ),
+    responses={**BAD_REQUEST},
+)
+def list_events(
+    db: DbSession,
+    page_params: PageQuery,
+    city: Annotated[
+        str | None, Query(description="Only events in this city", examples=["Lagos"])
+    ] = None,
+    category: Annotated[
+        str | None, Query(description="Only events in this category", examples=["music"])
+    ] = None,
+    starts_after: Annotated[
+        AwareDatetime | None,
+        Query(description="Only events starting at or after this time", examples=["2027-01-01T00:00:00Z"]),
+    ] = None,
+    starts_before: Annotated[
+        AwareDatetime | None,
+        Query(description="Only events starting at or before this time", examples=["2027-12-31T23:59:59Z"]),
+    ] = None,
+):
+    return event_service.list_events(
+        db, page_params, city, category, starts_after, starts_before
+    )
 
 
 @router.post(
