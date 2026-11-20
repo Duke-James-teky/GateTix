@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.responses import RedirectResponse
 
 from app.core.exceptions import register_exception_handlers
-from app.routes import auth, health
+from app.routes import auth, events, health, organisers, tiers
 
 API_PREFIX = "/api/v1"
 
@@ -22,6 +22,9 @@ register_exception_handlers(app)
 
 app.include_router(health.router, prefix=API_PREFIX)
 app.include_router(auth.router, prefix=API_PREFIX)
+app.include_router(organisers.router, prefix=API_PREFIX)
+app.include_router(events.router, prefix=API_PREFIX)
+app.include_router(tiers.router, prefix=API_PREFIX)
 
 
 @app.get("/", include_in_schema=False)
