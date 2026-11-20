@@ -26,12 +26,10 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 
 def create_access_token(user_id: int) -> str:
     """Create a signed JWT that identifies the user and expires after a set time."""
-    now = datetime.now(timezone.utc)
-    payload = {
-        "sub": str(user_id),
-        "iat": now,
-        "exp": now + timedelta(minutes=settings.access_token_expire_minutes),
-    }
+    expires_at = datetime.now(timezone.utc) + timedelta(
+        minutes=settings.access_token_expire_minutes
+    )
+    payload = {"sub": str(user_id), "exp": expires_at}
     return jwt.encode(payload, settings.secret_key, algorithm=settings.algorithm)
 
 
