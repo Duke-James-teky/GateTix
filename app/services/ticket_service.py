@@ -5,6 +5,8 @@ from app.core.exceptions import ConflictError
 from app.models.enums import OrderStatus
 from app.models.order import Order
 from app.models.ticket import Ticket
+from app.models.user import User
+from app.utils.pagination import PageParams, paginate
 from app.utils.ticket_codes import generate_ticket_code
 
 
@@ -30,3 +32,14 @@ def issue_tickets(db: Session, order: Order) -> list[Ticket]:
     db.add_all(tickets)
     db.flush()
     return tickets
+
+
+def list_my_tickets(db: Session, buyer: User, params: PageParams) -> dict:
+    """List the tickets that belong to the buyer's orders, newest first."""
+    query = (
+        select(Ticket)
+        .join(Order, Ticket.order_id == Order.id)
+        .where(Order.attendee_id == buyer.id)
+        .order_by(Ticket.id.desc())
+    )
+    return paginate(db, query, params)

@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.responses import RedirectResponse
 
 from app.core.exceptions import register_exception_handlers
-from app.routes import admin, auth, events, health, organisers, tiers
+from app.routes import admin, auth, events, health, orders, organisers, tickets, tiers
 
 API_PREFIX = "/api/v1"
 
@@ -25,6 +25,8 @@ app.include_router(auth.router, prefix=API_PREFIX)
 app.include_router(organisers.router, prefix=API_PREFIX)
 app.include_router(events.router, prefix=API_PREFIX)
 app.include_router(tiers.router, prefix=API_PREFIX)
+app.include_router(orders.router, prefix=API_PREFIX)
+app.include_router(tickets.router, prefix=API_PREFIX)
 app.include_router(admin.router, prefix=API_PREFIX)
 
 
