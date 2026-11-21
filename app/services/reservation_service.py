@@ -12,6 +12,7 @@ from app.models.order import Order
 from app.models.ticket_tier import TicketTier
 from app.models.user import User
 from app.schemas.order import OrderCreate
+from app.services.ticket_service import issue_tickets
 
 settings = get_settings()
 
@@ -63,7 +64,7 @@ def release_expired_reservations(db: Session, event_id: int) -> int:
 
 
 def reserve_tickets(db: Session, attendee: User, data: OrderCreate) -> Order:
-    """Hold tickets for the attendee for a limited time. Never sells more than exist."""
+    """Hold tickets for the attendee. Free tiers are completed on the spot."""
     tier = db.get(TicketTier, data.tier_id)
     if tier is None:
         raise NotFoundError("Ticket tier not found")
@@ -75,7 +76,7 @@ def reserve_tickets(db: Session, attendee: User, data: OrderCreate) -> Order:
     if event.starts_at <= datetime.now(timezone.utc):
         raise BadRequestError("This event has already started")
 
-    #expired reservations are released before every new reservation.
+    # Challenge 2: expired reservations are released before every new reservation.
     release_expired_reservations(db, event.id)
 
     already_pending = db.scalar(
@@ -88,7 +89,7 @@ def reserve_tickets(db: Session, attendee: User, data: OrderCreate) -> Order:
     if already_pending is not None:
         raise ConflictError("You already have a pending reservation for this event")
 
-    #lock the tier row. Anyone else reserving from this tier now waits.
+    # Challenge 1: lock the tier row. Anyone else reserving from this tier now waits.
     tier = db.scalar(
         select(TicketTier)
         .where(TicketTier.id == data.tier_id)
@@ -112,20 +113,40 @@ def reserve_tickets(db: Session, attendee: User, data: OrderCreate) -> Order:
     if data.quantity > available:
         raise ConflictError(f"Only {_tickets(available)} left")
 
-    tier.reserved += data.quantity
-    order = Order(
-        attendee_id=attendee.id,
-        tier_id=tier.id,
-        event_id=event.id,
-        quantity=data.quantity,
-        total_kobo=tier.price_kobo * data.quantity,
-        status=OrderStatus.PENDING,
-        expires_at=now + timedelta(minutes=settings.reservation_hold_minutes),
-    )
+    is_free = tier.price_kobo == 0
+    if is_free:
+        # Free tiers skip payment: the tickets are sold at once and issued right away.
+        tier.sold += data.quantity
+        order = Order(
+            attendee_id=attendee.id,
+            tier_id=tier.id,
+            event_id=event.id,
+            quantity=data.quantity,
+            total_kobo=0,
+            status=OrderStatus.PAID,
+        )
+    else:
+        tier.reserved += data.quantity
+        order = Order(
+            attendee_id=attendee.id,
+            tier_id=tier.id,
+            event_id=event.id,
+            quantity=data.quantity,
+            total_kobo=tier.price_kobo * data.quantity,
+            status=OrderStatus.PENDING,
+            expires_at=now + timedelta(minutes=settings.reservation_hold_minutes),
+        )
     db.add(order)
+
     try:
-        db.commit()  # saves the order and the new counter together, then releases the lock
+        if is_free:
+            db.flush()
+            issue_tickets(db, order)
+        db.commit()  # saves the order, the counter and any tickets together
     except IntegrityError:
         db.rollback()
         raise ConflictError("You already have a pending reservation for this event") from None
+
+    if is_free:
+        db.refresh(order, attribute_names=["tickets"])
     return order
