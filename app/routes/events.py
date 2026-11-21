@@ -14,7 +14,7 @@ from app.routes.responses import (
 from app.schemas.event import EventCreate, EventDetail, EventRead, EventUpdate
 from app.schemas.pagination import Page
 from app.schemas.ticket_tier import TierCreate, TierRead
-from app.services import event_service, tier_service
+from app.services import event_service, refund_service, tier_service
 from app.utils.pagination import PageQuery
 
 router = APIRouter(prefix="/events", tags=["Events"])
@@ -101,6 +101,21 @@ def update_event(data: EventUpdate, event: OwnedEvent, db: DbSession):
 )
 def publish_event(event: OwnedEvent, db: DbSession):
     return event_service.publish_event(db, event)
+
+
+@router.post(
+    "/{event_id}/cancel",
+    response_model=EventRead,
+    summary="Cancel an event and refund everyone",
+    description=(
+        "Owning organiser only. Every paid order is refunded automatically, unpaid "
+        "reservations are released, and the event is marked cancelled. "
+        "This cannot be undone."
+    ),
+    responses={**UNAUTHORIZED, **FORBIDDEN, **NOT_FOUND, **CONFLICT},
+)
+def cancel_event(event: OwnedEvent, db: DbSession):
+    return refund_service.cancel_event(db, event)
 
 
 @router.post(

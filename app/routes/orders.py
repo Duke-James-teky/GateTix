@@ -10,7 +10,12 @@ from app.routes.responses import (
 )
 from app.schemas.order import OrderCreate, OrderRead, OrderWithTickets
 from app.schemas.pagination import Page
-from app.services import order_service, payment_service, reservation_service
+from app.services import (
+    order_service,
+    payment_service,
+    refund_service,
+    reservation_service,
+)
 from app.utils.pagination import PageQuery
 
 router = APIRouter(prefix="/orders", tags=["Orders"])
@@ -57,3 +62,18 @@ def list_orders(buyer: BuyerUser, db: DbSession, page_params: PageQuery):
 )
 def pay(order: OwnOrder, db: DbSession):
     return payment_service.pay_order(db, order)
+
+
+@router.post(
+    "/{order_id}/refund",
+    response_model=OrderRead,
+    summary="Refund a paid order",
+    description=(
+        "Order's owner only. Allowed until 48 hours before the event starts. "
+        "The tickets are voided and the seats go back on sale. "
+        "Only paid orders can be refunded."
+    ),
+    responses={**BAD_REQUEST, **UNAUTHORIZED, **FORBIDDEN, **NOT_FOUND, **CONFLICT},
+)
+def refund(order: OwnOrder, db: DbSession):
+    return refund_service.refund_order(db, order)
