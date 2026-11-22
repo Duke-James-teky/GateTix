@@ -55,7 +55,7 @@ class EventDetail(EventRead):
 
 class EventReport(BaseModel):
     event_id: int = Field()
-    tiers: list[TierRead]
+    tiers: list[TierReport]
     total_sold: int = Field()
     total_checked_in: int = Field()
     total_revenue_kobo: int = Field()
