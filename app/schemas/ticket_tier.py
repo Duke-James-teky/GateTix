@@ -56,7 +56,7 @@ class TierRead(BaseModel):
     
 class TierReport(BaseModel):
     tier_id: int = Field()
-    name: str = Field(examples="VIP")
+    name: str = Field(examples=["VIP"])
     sold: int = Field()
     remaining: int = Field()
     checked_in: int = Field()

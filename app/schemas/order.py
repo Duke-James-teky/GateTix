@@ -10,7 +10,7 @@ class OrderCreate(BaseModel):
 class OrderRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
-    id: int = Field
+    id: int = Field()
     attendee_id: int = Field()
     tier_id: int = Field()
     quantity: int = Field()

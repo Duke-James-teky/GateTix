@@ -10,12 +10,12 @@ class EventCreate(BaseModel):
     venue: str = Field(min_length=1, max_length=200)
     city: str = Field(min_length=1, max_length=100)
     category: str = Field(min_length=1, max_length=50)
-    start_at: AwareDatetime = Field()
+    starts_at: AwareDatetime = Field()
     ends_at: AwareDatetime = Field()
 
     @model_validator(mode="after")
     def check_times(self):
-        if self.ends_at <= self.start_at:
+        if self.ends_at <= self.starts_at:
             raise ValueError("please put in a valid ends at ")
         return self
 
