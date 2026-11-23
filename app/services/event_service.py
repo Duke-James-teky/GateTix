@@ -9,6 +9,7 @@ from app.models.event import Event
 from app.models.ticket_tier import TicketTier
 from app.models.user import User
 from app.schemas.event import EventCreate, EventUpdate
+from app.services.reservation_service import release_expired_reservations
 from app.utils.pagination import PageParams, paginate
 
 EDITABLE_STATUSES = {EventStatus.DRAFT, EventStatus.PUBLISHED}
@@ -65,10 +66,15 @@ def publish_event(db: Session, event: Event) -> Event:
 
 def get_public_event(db: Session, event_id: int) -> Event:
     """Return a published event with its tiers. Anything else looks like it doesn't exist."""
+    # Reservations whose time is up still count as "reserved" until someone releases
+    # them, so release them first and the remaining-ticket counts are exact.
+    release_expired_reservations(db, event_id)
+
     event = db.scalar(
         select(Event)
         .where(Event.id == event_id, Event.status == EventStatus.PUBLISHED)
         .options(selectinload(Event.tiers))
+        .execution_options(populate_existing=True)
     )
     if event is None:
         raise NotFoundError("Event not found")

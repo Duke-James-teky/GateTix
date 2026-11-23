@@ -1,13 +1,41 @@
-from fastapi import APIRouter, Depends
+from typing import Annotated
+
+from fastapi import APIRouter, Depends, Query
 
 from app.core.dependencies import AdminUser, DbSession, require_admin
+from app.models.enums import ApplicationStatus
 from app.routes.responses import CONFLICT, FORBIDDEN, NOT_FOUND, UNAUTHORIZED
 from app.schemas.admin import EventModeration, OrganiserDecision, PlatformStats
 from app.schemas.event import EventRead
 from app.schemas.organiser import OrganiserApplicationRead
+from app.schemas.pagination import Page
 from app.services import admin_service, organiser_service
+from app.utils.pagination import PageQuery
 
 router = APIRouter(prefix="/admin", tags=["Admin"])
+
+
+@router.get(
+    "/organisers",
+    response_model=Page[OrganiserApplicationRead],
+    summary="List organiser applications",
+    description=(
+        "Admin only. Oldest first, one page at a time. Use `status=pending` to see "
+        "the applications waiting for a decision. The `id` of each one is what the "
+        "approve or reject endpoint needs."
+    ),
+    dependencies=[Depends(require_admin)],
+    responses={**UNAUTHORIZED, **FORBIDDEN},
+)
+def list_applications(
+    db: DbSession,
+    page_params: PageQuery,
+    status: Annotated[
+        ApplicationStatus | None,
+        Query(description="Only applications with this status"),
+    ] = None,
+):
+    return organiser_service.list_applications(db, page_params, status)
 
 
 @router.patch(

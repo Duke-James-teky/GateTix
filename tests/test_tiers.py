@@ -30,7 +30,7 @@ def test_an_organiser_adds_a_tier_to_their_event(client, auth, make_event, organ
         f"{API}/events/{event.id}/tiers", json=tier_payload(), headers=auth(organiser)
     )
 
-    assert response.status_code == 201
+    assert response.status_code == 201, response.text
     body = response.json()
     assert body["name"] == "VIP"
     assert body["price_kobo"] == 900000

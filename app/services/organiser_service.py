@@ -8,6 +8,7 @@ from app.models.organiser_application import OrganiserApplication
 from app.models.user import User
 from app.schemas.admin import OrganiserDecision
 from app.schemas.organiser import OrganiserApplicationCreate
+from app.utils.pagination import PageParams, paginate
 
 
 def apply_to_become_organiser(
@@ -35,6 +36,17 @@ def apply_to_become_organiser(
         db.rollback()
         raise ConflictError("You already have a pending application") from None
     return application
+
+
+def list_applications(
+    db: Session, params: PageParams, status: ApplicationStatus | None = None
+) -> dict:
+    """List organiser applications, oldest first, optionally filtered by status."""
+    query = select(OrganiserApplication)
+    if status is not None:
+        query = query.where(OrganiserApplication.status == status)
+    query = query.order_by(OrganiserApplication.id)
+    return paginate(db, query, params)
 
 
 def review_application(

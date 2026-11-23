@@ -8,6 +8,14 @@ from app.models.ticket_tier import TicketTier
 from app.schemas.ticket_tier import TierCreate, TierUpdate
 from app.services.event_service import EDITABLE_STATUSES
 
+NAME_CONSTRAINT = "uq_tier_name_per_event"
+
+
+def _violated_constraint(error: IntegrityError) -> str | None:
+    """The name of the database rule that refused the change, as PostgreSQL reports it."""
+    diagnostics = getattr(error.orig, "diag", None)
+    return getattr(diagnostics, "constraint_name", None)
+
 
 def _ensure_event_editable(event: Event) -> None:
     if event.status not in EDITABLE_STATUSES:
@@ -30,9 +38,13 @@ def add_tier(db: Session, event: Event, data: TierCreate) -> TicketTier:
     db.add(tier)
     try:
         db.commit()
-    except IntegrityError:
+    except IntegrityError as error:
         db.rollback()
-        raise ConflictError(f"A tier named '{data.name}' already exists for this event") from None
+        if _violated_constraint(error) == NAME_CONSTRAINT:
+            raise ConflictError(
+                f"A tier named '{data.name}' already exists for this event"
+            ) from None
+        raise  # any other broken rule is a real bug: show it, don't disguise it
     return tier
 
 
@@ -91,7 +103,9 @@ def update_tier(db: Session, tier: TicketTier, data: TierUpdate) -> TicketTier:
         setattr(tier, field, value)
     try:
         db.commit()
-    except IntegrityError:
+    except IntegrityError as error:
         db.rollback()
-        raise ConflictError("A tier with that name already exists for this event") from None
+        if _violated_constraint(error) == NAME_CONSTRAINT:
+            raise ConflictError("A tier with that name already exists for this event") from None
+        raise
     return tier
