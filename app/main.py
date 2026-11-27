@@ -1,11 +1,14 @@
+
 from fastapi import FastAPI
 from fastapi.responses import RedirectResponse
+from app.routes.crew import router as crew_router
 
 from app.core.exceptions import register_exception_handlers
 from app.routes import (
     admin,
     auth,
     checkin,
+    community,
     events,
     health,
     orders,
@@ -41,6 +44,7 @@ app.include_router(tiers.router, prefix=API_PREFIX)
 app.include_router(orders.router, prefix=API_PREFIX)
 app.include_router(tickets.router, prefix=API_PREFIX)
 app.include_router(admin.router, prefix=API_PREFIX)
+app.include_router(community.router, prefix=API_PREFIX)
 
 
 @app.get("/", include_in_schema=False)
