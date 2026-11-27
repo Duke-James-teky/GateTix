@@ -1,9 +1,9 @@
 
 from fastapi import FastAPI
 from fastapi.responses import RedirectResponse
-from app.routes.crew import router as crew_router
 
 from app.core.exceptions import register_exception_handlers
+
 from app.routes import (
     admin,
     auth,
@@ -18,7 +18,11 @@ from app.routes import (
     tiers,
 )
 
+from app.routes.crew import router as crew_router
+
+
 API_PREFIX = "/api/v1"
+
 
 app = FastAPI(
     title="GateTix API",
@@ -32,8 +36,11 @@ app = FastAPI(
     version="1.0.0",
 )
 
+
 register_exception_handlers(app)
 
+
+# Core application routes
 app.include_router(health.router, prefix=API_PREFIX)
 app.include_router(auth.router, prefix=API_PREFIX)
 app.include_router(organisers.router, prefix=API_PREFIX)
@@ -44,7 +51,14 @@ app.include_router(tiers.router, prefix=API_PREFIX)
 app.include_router(orders.router, prefix=API_PREFIX)
 app.include_router(tickets.router, prefix=API_PREFIX)
 app.include_router(admin.router, prefix=API_PREFIX)
+
+
+# Community module
 app.include_router(community.router, prefix=API_PREFIX)
+
+
+# GateTix Crew module
+app.include_router(crew_router, prefix=API_PREFIX)
 
 
 @app.get("/", include_in_schema=False)
